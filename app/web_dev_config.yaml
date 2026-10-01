@@ -1,0 +1,5 @@
+# `flutter run -d chrome` proxies API calls to the Dart server so cookies stay same-origin.
+server:
+  proxy:
+    - target: "http://localhost:8080/"
+      prefix: "/api/"

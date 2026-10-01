@@ -1,0 +1,12 @@
+# Flutter / Dart
+.dart_tool/
+build/
+*.iml
+.idea/
+app/.flutter-plugins*
+# Data — never commit the participant roster or the live DB
+*.db
+*.db-*
+participants.csv
+gdgdex_participants*.csv
+.claude/

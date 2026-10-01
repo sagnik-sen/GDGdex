@@ -1,0 +1,7 @@
+**/.dart_tool
+**/build
+**/*.db*
+*.csv
+!participants.example.csv
+.claude
+**/.idea

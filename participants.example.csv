@@ -1,0 +1,5 @@
+name,email,reg_no,role,is_admin,avatar_url
+Sagnik Sen,sagnik@example.com,23BCE1234,General Secretary,yes,
+Alice Rao,alice@example.com,23BCE0001,Member,,
+Bob Iyer,bob@example.com,23BCE0002,Tech Lead,,
+Carol Das,carol@example.com,23BCE0003,Design Lead,,

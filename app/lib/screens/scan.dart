@@ -108,16 +108,21 @@ class _ScannerPageState extends State<ScannerPage> {
               ),
             ),
           ),
-          // Viewfinder
-          Center(
-            child: Container(
-              width: 250,
-              height: 250,
-              decoration: BoxDecoration(
-                border: Border.all(color: Colors.white, width: 3),
-                borderRadius: BorderRadius.circular(24),
-              ),
-            ),
+          // Viewfinder (hidden when the camera failed, so the error text stays readable)
+          ValueListenableBuilder(
+            valueListenable: _controller,
+            builder: (_, state, _) => state.error != null
+                ? const SizedBox.shrink()
+                : Center(
+                    child: Container(
+                      width: 250,
+                      height: 250,
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.white, width: 3),
+                        borderRadius: BorderRadius.circular(24),
+                      ),
+                    ),
+                  ),
           ),
           Positioned(
             left: 16,

@@ -89,14 +89,20 @@ class _AdminScreenState extends State<AdminScreen> {
             onPressed: () => Navigator.pushNamed(context, '/board'),
             icon: const Icon(Icons.tv),
           ),
+          IconButton(
+            tooltip: 'Print badges',
+            onPressed: () => web.window.open('/api/admin/badges.html', '_blank'),
+            icon: const Icon(Icons.print),
+          ),
           PopupMenuButton<String>(
             icon: const Icon(Icons.download),
-            tooltip: 'Export CSV',
+            tooltip: 'Export',
             // Same-origin navigation carries the session cookie; the server replies with an attachment.
-            onSelected: (f) => web.window.open('/api/admin/export/$f', '_blank'),
+            onSelected: (f) => web.window.open('/api/admin/$f', '_blank'),
             itemBuilder: (_) => const [
-              PopupMenuItem(value: 'members.csv', child: Text('Members + counts (CSV)')),
-              PopupMenuItem(value: 'collections.csv', child: Text('All collections (CSV)')),
+              PopupMenuItem(value: 'export/members.csv', child: Text('Members + counts (CSV)')),
+              PopupMenuItem(value: 'export/collections.csv', child: Text('All collections (CSV)')),
+              PopupMenuItem(value: 'backup.db', child: Text('Database backup (SQLite)')),
             ],
           ),
         ],
@@ -188,7 +194,8 @@ class _AdminScreenState extends State<AdminScreen> {
                     icon: const Icon(Icons.stop),
                     label: const Text('END EVENT'),
                   ),
-                if (status != 'NOT_STARTED')
+                // Not offered mid-event: one mis-tap would pause collecting for everyone.
+                if (status == 'ENDED')
                   OutlinedButton(
                     onPressed: () => _setEvent('NOT_STARTED', 'Reset to not started'),
                     child: const Text('RESET STATUS'),

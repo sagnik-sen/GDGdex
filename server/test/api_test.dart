@@ -142,7 +142,9 @@ void main() {
 
   test('non-admins and anonymous users cannot reach admin endpoints', () async {
     for (final c in [alice, null]) {
-      expect((await call('GET', 'api/admin/members', cookie: c)).$1, c == null ? 401 : 403);
+      for (final path in ['members', 'badges.html', 'backup.db', 'export/members.csv']) {
+        expect((await call('GET', 'api/admin/$path', cookie: c)).$1, c == null ? 401 : 403);
+      }
       expect((await call('POST', 'api/admin/event', body: {'status': 'ACTIVE'}, cookie: c)).$1, c == null ? 401 : 403);
     }
     expect(store.event()['status'], 'NOT_STARTED');
@@ -166,6 +168,21 @@ void main() {
       409,
     );
     expect((await call('GET', 'api/admin/export/members.csv', cookie: admin)).$2['raw'], contains('dan@x.com'));
+  });
+
+  test('projector feed, printable badges and DB backup', () async {
+    await setEvent(admin, 'ACTIVE');
+    await call('POST', 'api/collect', body: {'code': bobKey}, cookie: alice);
+    final recent = (await call('GET', 'api/state')).$2['recent'] as List;
+    expect(recent.single, containsPair('collected', 'Bob'));
+    expect(recent.single.containsKey('passkey'), isFalse);
+
+    final html = (await call('GET', 'api/admin/badges.html', cookie: admin)).$2['raw'] as String;
+    expect(html, allOf(contains(bobKey), contains('<svg'), contains('GDG-003')));
+
+    final res = await api.call(Request('GET', Uri.parse('http://x/api/admin/backup.db'), headers: {'cookie': admin}));
+    final bytes = await res.read().expand((b) => b).toList();
+    expect(String.fromCharCodes(bytes.take(15)), 'SQLite format 3');
   });
 
   test('login is rate limited on failures only', () async {

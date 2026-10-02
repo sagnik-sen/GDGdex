@@ -164,6 +164,26 @@ class Db {
     ];
   }
 
+  /// Latest discoveries for the projector feed (names only, no secrets).
+  List<Map<String, Object?>> recent({int limit = 8}) => [
+    for (final r in db.select(
+      '''
+          SELECT a.name collector, b.name collected, b.dex_no, c.created_at FROM ($activeCollections) c
+          JOIN users a ON a.id = c.collector_id JOIN users b ON b.id = c.collected_id
+          ORDER BY c.created_at DESC, c.id DESC LIMIT ?''',
+      [limit],
+    ))
+      {
+        'collector': r['collector'],
+        'collected': r['collected'],
+        'dexId': dexId(r['dex_no'] as int),
+        'at': r['created_at'],
+      },
+  ];
+
+  /// Consistent snapshot of the live DB (safe while serving traffic).
+  void backupTo(String path) => db.execute('VACUUM INTO ?', [path]);
+
   Map<String, Object?> event() {
     final e = one('SELECT * FROM event WHERE id = 1')!;
     return {'name': e['name'], 'status': e['status'], 'startedAt': e['started_at'], 'endedAt': e['ended_at']};

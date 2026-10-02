@@ -1,8 +1,10 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:shelf/shelf.dart';
 import 'package:sqlite3/sqlite3.dart';
 
+import 'badges.dart';
 import 'db.dart';
 
 const _cookie = 'gdgdex_session';
@@ -68,7 +70,15 @@ class Api {
     switch ((m, path)) {
       case ('GET', 'api/state'):
         return _json(
-          _cached('state', () => {'event': store.event(), 'stats': store.stats(), 'top': store.leaderboard(limit: 5)}),
+          _cached(
+            'state',
+            () => {
+              'event': store.event(),
+              'stats': store.stats(),
+              'top': store.leaderboard(limit: 5),
+              'recent': store.recent(),
+            },
+          ),
         );
       case ('GET', 'api/leaderboard'):
         return _json(_cached('leaderboard', () => {'event': store.event(), 'entries': store.leaderboard()}));
@@ -138,7 +148,9 @@ class Api {
       try {
         loginLimiter.hit('e:$email');
         ipLimiter.hit(ip);
-      } on ApiError {/* recorded; the next attempt gets the 429 */}
+      } on ApiError {
+        /* recorded; the next attempt gets the 429 */
+      }
       throw ApiError(401, 'Email or registration number is incorrect.');
     }
     if (u['is_active'] != 1) throw ApiError(403, 'This GDGdex has been disabled. Talk to an organizer.');
@@ -345,6 +357,25 @@ class Api {
               ranks[dexId(r['dex_no'] as int)] ?? '',
             ],
         ]);
+      case ('GET', ['backup.db']):
+        final tmp = '${Directory.systemTemp.createTempSync('gdgdex').path}/gdgdex.db';
+        store.backupTo(tmp);
+        final bytes = File(tmp).readAsBytesSync();
+        File(tmp).parent.deleteSync(recursive: true);
+        final stamp = DateTime.now().toIso8601String().substring(0, 19).replaceAll(':', '-');
+        return Response.ok(
+          bytes,
+          headers: {
+            'content-type': 'application/octet-stream',
+            'content-disposition': 'attachment; filename="gdgdex-$stamp.db"',
+            'cache-control': 'no-store',
+          },
+        );
+      case ('GET', ['badges.html']):
+        return Response.ok(
+          badgesHtml(db.select('SELECT * FROM users WHERE is_active = 1 ORDER BY dex_no')),
+          headers: {'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store'},
+        );
       case ('GET', ['export', 'collections.csv']):
         final rows = db.select('''
           SELECT a.dex_no an, a.name aname, b.dex_no bn, b.name bname, c.created_at FROM collections c

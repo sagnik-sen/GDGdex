@@ -28,8 +28,10 @@ Registration numbers are stored only as salted HMAC hashes. **Never commit the r
 
 1. Deploy over **HTTPS**, because phones block the camera on plain http. Set `SECURE_COOKIES=1`.
 2. An organizer (`is_admin`) opens **⋯ → Admin dashboard** and presses **START EVENT**, then **END EVENT** when done. Ending freezes the leaderboard, keeps all data and shows the winner.
-3. Projector: open `/#/board` (big leaderboard + join QR, refreshes every 4s).
-4. Exports: the admin download icon gives the members+counts CSV and the full collections CSV.
+3. Projector: open `/#/board`. It shows the big leaderboard, a live feed of new discoveries and a join QR, refreshing every 4s.
+4. Printed badges: the admin print icon opens every member's QR + passkey as A4 lanyard cards, for anyone without a working phone.
+5. Exports: the admin download icon gives the members+counts CSV, the full collections CSV and a SQLite backup.
+6. Backups: the server also snapshots the DB every 5 minutes into `BACKUP_DIR` (default `<db dir>/backups`) and keeps the newest 24.
 
 ## Deploy (Docker)
 

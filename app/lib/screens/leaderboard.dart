@@ -22,7 +22,10 @@ class LeaderboardScreen extends StatelessWidget {
 /// Polls the server; freezes naturally once the event is ENDED (no new collections are accepted).
 class LeaderboardView extends StatefulWidget {
   final bool projector;
-  const LeaderboardView({super.key, this.projector = false});
+
+  /// Only poll while on screen; the tab stays alive in an IndexedStack.
+  final bool active;
+  const LeaderboardView({super.key, this.projector = false, this.active = true});
   @override
   State<LeaderboardView> createState() => _LeaderboardViewState();
 }
@@ -30,12 +33,25 @@ class LeaderboardView extends StatefulWidget {
 class _LeaderboardViewState extends State<LeaderboardView> {
   Json? _data;
   Json? _stats;
+  List<Json> _recent = [];
   Object? _error;
   Timer? _timer;
 
   @override
   void initState() {
     super.initState();
+    if (widget.active) _start();
+  }
+
+  @override
+  void didUpdateWidget(LeaderboardView old) {
+    super.didUpdateWidget(old);
+    if (widget.active == old.active) return;
+    _timer?.cancel();
+    if (widget.active) _start();
+  }
+
+  void _start() {
     _load();
     _timer = Timer.periodic(Duration(seconds: widget.projector ? 4 : 8), (_) => _load());
   }
@@ -43,11 +59,12 @@ class _LeaderboardViewState extends State<LeaderboardView> {
   Future<void> _load() async {
     try {
       final d = await Api.get('leaderboard');
-      final s = widget.projector ? (await Api.get('state'))['stats'] as Json : null;
+      final s = widget.projector ? await Api.get('state') : null;
       if (mounted) {
         setState(() {
           _data = d;
-          _stats = s;
+          _stats = s?['stats'] as Json?;
+          _recent = ((s?['recent'] as List?) ?? []).cast<Json>();
           _error = null;
         });
       }
@@ -123,10 +140,11 @@ class _LeaderboardViewState extends State<LeaderboardView> {
       );
     }
 
-    // Projector: board + side panel with stats and a join QR.
+    // Projector: board + live discovery feed + side panel with stats and a join QR.
     return Row(
       children: [
         Expanded(flex: 3, child: board),
+        SizedBox(width: 400, child: _Feed(_recent)),
         Container(
           width: 360,
           padding: const EdgeInsets.all(32),
@@ -153,6 +171,67 @@ class _LeaderboardViewState extends State<LeaderboardView> {
             ],
           ),
         ),
+      ],
+    );
+  }
+}
+
+/// Ticker of the latest discoveries; new rows slide in.
+class _Feed extends StatelessWidget {
+  final List<Json> items;
+  const _Feed(this.items);
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(8, 24, 16, 24),
+      children: [
+        Text(
+          'LIVE DISCOVERIES',
+          style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 2, fontSize: 20, color: cs.outline),
+        ),
+        const SizedBox(height: 12),
+        if (items.isEmpty) Text('Waiting for the first catch…', style: TextStyle(color: cs.outline, fontSize: 18)),
+        for (final e in items)
+          TweenAnimationBuilder<double>(
+            key: ValueKey('${e['at']}${e['collector']}${e['dexId']}'),
+            tween: Tween(begin: 0, end: 1),
+            duration: const Duration(milliseconds: 600),
+            curve: Curves.easeOutCubic,
+            builder: (_, v, child) => Opacity(
+              opacity: v,
+              child: Transform.translate(offset: Offset(40 * (1 - v), 0), child: child),
+            ),
+            child: Container(
+              margin: const EdgeInsets.only(bottom: 10),
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: cs.surfaceContainer,
+                borderRadius: BorderRadius.circular(16),
+                border: Border(left: BorderSide(color: colorFor(e['dexId']), width: 4)),
+              ),
+              child: Text.rich(
+                TextSpan(
+                  children: [
+                    TextSpan(
+                      text: e['collector'],
+                      style: const TextStyle(fontWeight: FontWeight.w800),
+                    ),
+                    TextSpan(
+                      text: ' discovered ',
+                      style: TextStyle(color: cs.outline),
+                    ),
+                    TextSpan(
+                      text: e['collected'],
+                      style: TextStyle(fontWeight: FontWeight.w800, color: colorFor(e['dexId'])),
+                    ),
+                  ],
+                ),
+                style: const TextStyle(fontSize: 18),
+              ),
+            ),
+          ),
       ],
     );
   }

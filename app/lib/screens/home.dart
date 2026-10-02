@@ -66,7 +66,7 @@ class _HomeShellState extends State<HomeShell> {
             children: [
               DexCardView(me: me),
               CollectionView(count: me['count']),
-              const LeaderboardView(),
+              LeaderboardView(active: _tab == 2),
             ],
           ),
           floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
